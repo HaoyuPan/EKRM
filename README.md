@@ -14,16 +14,12 @@ The code requires the following environment to run:
 
 * Python===3.10
 * Cuda==11.2
-* cupy-cuda11x
-* numpy==1.23.2
-* scipy==1.9.1
-* scikit-learn==1.1.2
-* Pillow==9.2.0
-* matplotlib==3.5.3
-* opencv-python==4.7.0.72
-* pandas==2.0.0
-* tqdm==4.65.0
-* numba==0.57.1
+
+Python-related dependency files can be found in `requirements.txt`, and can be installed using the following command:
+
+```shell
+pip install -r requirements.txt
+```
 
 ## Usage
 
@@ -35,7 +31,7 @@ A [demo directory](./demo) with the source image and result is provided. The fil
 * [Script 2: Trainer](./demo/s2_trainer.py)
 * [Script 3: Predictor](./demo/s3_expert_system.py)
 * [Script 4: Evaluator](./demo/s4_predictor.py)
-* [Script 5: Boundary fixer](./demo/s5_fix_noize.py)
+* [Script 5: Boundary fixer](./demo/s5_boundary_fixer.py)
 
 ## Contact
 
