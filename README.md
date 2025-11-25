@@ -17,7 +17,7 @@ Haoyu Pan, Cheng Zhao, Jialun Niu, Jinquan Xing, Huiguan Chen, Rui Zhang. Expert
 To run this code, the following environment is required:
 
 - Python: 3.10
-- CUDA: 11.2
+- CUDA: 12.9
 
 You can install the necessary Python dependencies by running the following command:
 
@@ -36,6 +36,7 @@ A [demo directory](./demo) is provided, which includes both the source image and
 * [Script 3: Expert system](./demo/s3_expert_system.py)
 * [Script 4: Predictor](./demo/s4_predictor.py)
 * [Script 5: Boundary fixer](./demo/s5_boundary_fixer.py)
+* [Script 6: Batch process](./demo/s6_batch_process.py)
 
 ### Steps for Reconstruction
 

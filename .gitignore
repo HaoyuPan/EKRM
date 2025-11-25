@@ -133,5 +133,6 @@ dmypy.json
 /data/output
 /tests/output
 /demo/output
+!/demo/output/*/*/model.pkl
 /tests/data/output
 /main.zip

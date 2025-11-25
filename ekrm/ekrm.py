@@ -333,16 +333,16 @@ class EKRM:
             pickle.dump(model, f)
         return model
 
-    def predict(self, use_cache: bool = True) -> cp.ndarray:
+    def predict(self, use_cache: bool = True, image: cp.ndarray = None) -> cp.ndarray:
         npy_input_path = self.get_kmeans_dir(is_input=True) / 'predicted.npz'
         npy_output_path = self.get_kmeans_dir(is_input=False) / 'predicted'
         if use_cache and npy_input_path.exists():
             logger.info('Loading cached prediction result ...')
             return self.load_npz(npy_input_path)
         logger.info('Predicting ...')
-        arr = self.get_image_array(self.color_space)
+        arr = self.get_image_array(self.color_space) if image is None else image
         channel_count = arr.shape[-1]
-        to_predict: cp.ndarray = arr.reshape((self.pixel_count, channel_count))
+        to_predict: cp.ndarray = arr.reshape((-1, channel_count))
         predicted = self.kmeans_fit().predict(to_predict)
         predicted = predicted.reshape(arr.shape[:-1])
         self.save_image(predicted, npy_output_path)
@@ -409,7 +409,7 @@ class EKRM:
         mapping_dict = {color_index: group_index for group_index, color_index in files}
         return mapping_dict
 
-    def kmeans_evaluate(self, use_cache=True) -> cp.ndarray:
+    def kmeans_evaluate(self, use_cache=True, image: cp.ndarray = None) -> cp.ndarray:
         logger.info('Getting K-Means result after manually classification  ...')
         in_dir, opath = self.kmeans_get_classification_dir(is_input=True), self.kmeans_get_classification_dir()
         groups = self.groups
@@ -419,20 +419,21 @@ class EKRM:
         mapping_dict = self.get_mapping_dict()
         unmatched = list(groups)[0].index
         mapping = cp.array(tuple(mapping_dict.get(i, unmatched) for i in range(self.kmeans_n_cluster)), dtype=cp.int_)
-        predicted = self.predict(use_cache=use_cache)
+        predicted = self.predict(use_cache=use_cache, image=image)
 
-        combined_colors_dir = self.get_opath(opath / 'combined-colors')
-        rgb = self.get_image_array(Colorspace.rgb)
-        combined_dict = {g.index: [] for g in groups}
-        for i in range(self.kmeans_n_cluster):
-            combined_dict[mapping_dict[i]].append(rgb[predicted == i])
-        for g in groups:
-            combined = combined_dict[g.index]
-            if not combined:
-                continue
-            combined = np.vstack(combined)
-            combined = self.color_data_to_square_image(combined)
-            self.save_image(combined, combined_colors_dir / f'{g.name}')
+        if image is None:
+            combined_colors_dir = self.get_opath(opath / 'combined-colors')
+            rgb = self.get_image_array(Colorspace.rgb)
+            combined_dict = {g.index: [] for g in groups}
+            for i in range(self.kmeans_n_cluster):
+                combined_dict[mapping_dict[i]].append(rgb[predicted == i])
+            for g in groups:
+                combined = combined_dict[g.index]
+                if not combined:
+                    continue
+                combined = np.vstack(combined)
+                combined = self.color_data_to_square_image(combined)
+                self.save_image(combined, combined_colors_dir / f'{g.name}')
 
         predicted = mapping[predicted]
         self.save_image(self.get_image_array(Colorspace.rgb), opath / 'source')
@@ -678,3 +679,28 @@ class EKRM:
         self.save_image(image, out / 'fixed')
         self.clean_gpu_memory()
         return image
+
+    def batch_process(
+            self,
+            src_dir: Path, dst_dir: Path,
+            convolve_radius: int = None, pixel_count: int = None, max_iter: int = None,
+    ):
+        # 实现批量处理：遍历src_dir中的所有png和jpg文件
+        src_dir, dst_dir = Path(src_dir), Path(dst_dir)
+        dst_dir.mkdir(parents=True, exist_ok=True)
+
+        image_files: list[Path] = list(src_dir.glob('*.png')) + list(src_dir.glob('*.jpg'))
+
+        for src_file in image_files:
+            dst_file = dst_dir / src_file.relative_to(src_dir).with_suffix('.png')
+            obj = EKRM(src_file)
+            with self.skip_saving_image():
+                image = obj.get_image_array(self.color_space)
+                image = self.kmeans_evaluate(use_cache=False, image=image)
+                image = self.fix_noizy_pixels(
+                    image=image,
+                    convolve_radius=convolve_radius,
+                    pixel_count=pixel_count,
+                    max_iter=max_iter
+                )
+            self.save_image(image, dst_file)
